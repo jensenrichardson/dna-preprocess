@@ -7,13 +7,11 @@ wildcard_constraints:
 
 rule all:
 	#input: expand("02-mapping/{sample}/{sample}.Aligned.out.bam", sample=samples.to_dict('index'))
+    input: expand("04-Markdup/{sample}.markdup.bam", sample=samples.to_dict('index'))
 	#input: expand("04-SplitCigar/{sample}.splitcigar.bam", sample=samples.to_dict('index'))
 	#input: expand("06-ApplyRecalibration/{sample}.recalibrated.bam", sample=samples.to_dict('index'))
-	input: expand("07-HaplotypeCaller/{sample}.hapcall.vcf", sample=samples.to_dict('index'))
+	#input: expand("07-HaplotypeCaller/{sample}.hapcall.vcf", sample=samples.to_dict('index'))
 
-include: "rules/Star.smk"
+include: "rules/Bwa2.smk"
 include: "rules/MarkDuplicates.smk"
-include: "rules/SplitNCigarReads.smk"
-include: "rules/BaseRecalibrator.smk"
-include: "rules/ApplyRecalibration.smk"
-include: "rules/HaplotypeCaller.smk"
+include: "rules/SortSam.smk"

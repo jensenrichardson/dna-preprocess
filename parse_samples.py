@@ -20,7 +20,7 @@ class Sample:
     def __init__(self, name=""):
         self.name = name
         self.readgroups = []
-        self.command = ""
+        self.command = []
 
     def __repr__(self):
         rep = f'Sample(name: {self.name}, readgroups: {self.readgroups}, command: {self.command})'
@@ -36,6 +36,7 @@ class Readgroup:
         self.rg = rg
         self._r1 = ""
         self._r2 = ""
+        self.command = ""
 
     # Equality
     def _is_valid_operand(self, other):
@@ -48,7 +49,7 @@ class Readgroup:
 
     # better printing
     def __repr__(self):
-        rep = f'Readgroup(rg: {self.rg}, r1: {self.r1}, r2: {self.r2})'
+        rep = f'Readgroup(rg: {self.rg}, r1: {self.r1}, r2: {self.r2}, command: {self.command})'
         return rep
 
     # getters and setters for r1 and r2 that ensure that the file exists
@@ -112,16 +113,19 @@ def main(args):
             print(f'{s.name} has {len(s.readgroups)} readgroups')
     if args.star:
         for s in samples:
-            s.command = getCommand(s)
+            s.command = getStarCommand(s)
+    if args.bwa2:
+        for s in samples:
+            s = getBwaCommand(s)
     # Constructs a dictionary with the following format:
     # "sample": ["sample name", ["rg1"...], "star command"]
-    sample_dict = constructDict(samples, args.star)
+    sample_dict = constructDict(samples, args.star, args.bwa2)
     if args.output:
         tsv_file = args.output
     else:
         directory = directory.parent
         tsv_file = os.path.join(directory, "samples.tsv")
-    print_tsv(sample_dict, tsv_file, args.star)
+    print_tsv(sample_dict, tsv_file, args.star, args.bwa2)
     print(f'Formed {tsv_file}/samples.tsv of {len(samples)} samples.')
 
 
@@ -183,7 +187,7 @@ def get_readgroups(samples, fastq_files, fastq_dir, verb):
     return final_samples
 
 
-def getCommand(sample):
+def getStarCommand(sample):
     if len(sample.readgroups) == 1:
         return f'--readFilesIn {sample.readgroups[0].r1} {sample.readgroups[0].r2} --outSAMattributes All ' \
                f'--outSAMattrRGline ID:{sample.readgroups[0].rg} PL:ILLUMINA SM:{sample.name} '
@@ -198,27 +202,45 @@ def getCommand(sample):
         samattr = f'--outSAMattributes All --outSAMattrRGline ID:{rgs[0]} PL:ILLUMINA SM:{sample.name} '
         for rg in rgs[1:]:
             samattr = samattr + f', ID:{rg} PL:ILLUMINA SM:{sample.name} '
-        return f'--readFilesIn {",".join(r1s)} {",".join(r2s)} {samattr}'
+        return [f'--readFilesIn {",".join(r1s)} {",".join(r2s)} {samattr}']
 
 
-def constructDict(samples, star):
+def getBwaCommand(sample):
+    for rg in sample.readgroups:
+        # need two back slashed on the tabs for snakemake
+        command = f' -R \'@RG\\tID:{rg.rg}\\tPL:ILLUMINA\\tSM:{sample.name}\' '
+        rg.command = command
+    return sample
+
+
+def constructDict(samples, star, bwa):
     sample_dict = {}
     for s in samples:
-        rgs = [rg.r1 for rg in s.readgroups] + [rg.r2 for rg in s.readgroups]
+        files = [rg.r1 for rg in s.readgroups] + [rg.r2 for rg in s.readgroups]
         if star:
-            sample_dict[s.name] = [s.name, rgs, s.command]
+            sample_dict[s.name] = [s.name, files, s.command[0]]
+        elif bwa:
+            groups = {}
+            for readgroup in s.readgroups:
+                name = readgroup.rg
+                file1 = readgroup.r1
+                file2 = readgroup.r2
+                command = readgroup.command
+                groups[name] = [file1, file2, command]
+            sample_dict[s.name] = [s.name, groups, s.command]
         else:
-            sample_dict[s.name] = [s.name, rgs]
+            sample_dict[s.name] = [s.name, files]
     return sample_dict
 
 
-def print_tsv(sample_d, tsv_file, star):
+def print_tsv(sample_d, tsv_file, star, bwa):
     if star:
+        data = pd.DataFrame.from_dict(sample_d, orient='index', columns=['sample_name', 'files', 'command'])
+    elif bwa:
         data = pd.DataFrame.from_dict(sample_d, orient='index', columns=['sample_name', 'files', 'command'])
     else:
         data = pd.DataFrame.from_dict(sample_d, orient='index', columns=['sample_name', 'files'])
     data.to_csv(tsv_file, sep='\t', index=False)
-
 
 
 if __name__ == "__main__":
@@ -229,6 +251,7 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", type=str, help="Name of output tsv")
     parser.add_argument("-v", "--verbose", action="count", default=0, help="Enable debug output")
     parser.add_argument("-s", "--star", action="store_true", help="Form commands for mapping with STAR.")
+    parser.add_argument("-b", "--bwa2", action="store_true", help="Form commands for mapping with bwa mem 2.")
     parser.add_argument("-i", "--input-samples", type=str, help="Provide a tsv of sample names to look for in the "
                                                                 "fastq directory.")
     args = parser.parse_args()
