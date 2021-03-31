@@ -6,7 +6,8 @@ wildcard_constraints:
     sample ="|".join(samples.index.tolist())
 rule bwa_map:
     input:
-        fastq=lambda wildcards: samples.loc[wildcards.sample, "files"][wildcards.readgroup][:-1]
+        fastq=lambda wildcards: samples.loc[wildcards.sample, "files"][wildcards.readgroup][:-1],
+	ref=config["ref_gen"]
     params:
         command=lambda wildcards: samples.loc[wildcards.sample, "files"][wildcards.readgroup][-1]
     output:
@@ -15,11 +16,12 @@ rule bwa_map:
         "02-mapping/{sample}/{readgroup}.log",
     resources:
         runtime=120,
-        cores=48
+        cores=lambda wildcards, attempt: int(24 / attempt)
     shell:
         "bwa-mem2 mem "
         "-t {resources.cores} "
         "-o {output.sam} "
         "{params.command} "
+	"{input.ref} "
         "{input.fastq} "
         "&> {log}"

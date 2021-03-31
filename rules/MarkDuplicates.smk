@@ -10,17 +10,17 @@ rule MarkDuplicates:
         lambda wildcards: expand("03-Sorted/{sample}/{readgroup}.sorted.bam", sample=wildcards.sample, readgroup=list(samples.loc[wildcards.sample, "files"].keys()))
     output:
         bam="04-Markdup/{sample}.markdup.bam",
-        bai="04-Markdup/{sample}.markdup.bam.bai",
-        sbi="04-Markdup/{sample}.markdup.bam.sbi"
+	metrics="04-Markdup/{sample}.metrics"
     log:
-        "03-markdup/{sample}.log"
+        "04-Markdup/{sample}.log"
     params:
         lambda wildcards, input: '-I ' + ' -I '.join(input)
     resources:
         cores=16,
-	    runtime=45
+	runtime=lambda wildcards, attempt: 30 + 30 * attempt
     shell:
         "gatk MarkDuplicates "
-        "{params}"
+        "{params} "
         "-O {output.bam} "
+	"-M {output.metrics} "
         "&> {log}"
