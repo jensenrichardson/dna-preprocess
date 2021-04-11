@@ -4,7 +4,7 @@ configfile: "config.yaml"
 samples = pd.read_table(config["samples_tsv"], converters={"files": ast.literal_eval}).set_index("sample_name", drop=False)
 wildcard_constraints:
     sample ="|".join(samples.index.tolist())
-rule bwa_map:
+rule BwaMap:
     input:
         fastq=lambda wildcards: samples.loc[wildcards.sample, "files"][wildcards.readgroup][:-1],
 	ref=config["ref_gen"]
