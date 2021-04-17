@@ -11,7 +11,7 @@ rule BwaMap:
     params:
         command=lambda wildcards: samples.loc[wildcards.sample, "files"][wildcards.readgroup][-1]
     output:
-        sam="02-mapping/{sample}/{readgroup}.aligned.sam"
+        sam=temp("02-mapping/{sample}/{readgroup}.aligned.sam")
     log:
         "02-mapping/{sample}/{readgroup}.log",
     resources:

@@ -2,7 +2,7 @@ rule SortSam:
     input:
         "02-mapping/{sample}/{readgroup}.aligned.sam"
     output:
-        "03-Sorted/{sample}/{readgroup}.sorted.bam",
+        temp("03-Sorted/{sample}/{readgroup}.sorted.bam"),
     log:
         "03-Sorted/{sample}/{readgroup}.log"
     resources:

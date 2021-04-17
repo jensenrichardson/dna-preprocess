@@ -6,7 +6,7 @@ rule ApplyCalibration:
         ref=config["ref_gen"],
         table="05-BaseRecalibrator/{sample}.table"
     output:
-        bam="06-ApplyRecalibration/{sample}.recalibrated.bam",
+        bam=protected("06-ApplyRecalibration/{sample}.recalibrated.bam"),
         bai="06-ApplyRecalibration/{sample}.recalibrated.bai"
     log:
         "06-ApplyRecalibration/{sample}.log"
