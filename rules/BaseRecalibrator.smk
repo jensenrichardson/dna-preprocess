@@ -14,6 +14,7 @@ rule BaseRecalibration:
         cores=16,
 	runtime=lambda wildcards, attempt: 30 * attempt + 30 * (attempt - 1)
     shell:
+        "OMP_NUM_THREADS={resources.cores} "
         "gatk BaseRecalibrator "
         "-R {input.ref} "
         "-I {input.bam} "
