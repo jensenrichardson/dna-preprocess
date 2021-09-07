@@ -12,7 +12,7 @@ rule BaseRecalibration:
         "05-BaseRecalibrator/{sample}.log"
     resources:
         cores=16,
-	runtime=lambda wildcards, attempt: 30 * attempt + 360 * (attempt - 1)
+	runtime=lambda wildcards, attempt: 60 * attempt + 240 * (attempt - 1)
     group: "BaseRecalibration"
     shell:
         "OMP_NUM_THREADS={resources.cores} "
