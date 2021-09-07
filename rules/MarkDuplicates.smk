@@ -17,7 +17,7 @@ rule MarkDuplicates:
         lambda wildcards, input: '-I ' + ' -I '.join(input)
     resources:
         cores=16,
-	runtime=lambda wildcards, attempt: 30 + 30 * attempt
+	runtime=lambda wildcards, attempt: 30 + 60 * attempt
     shell:
         "gatk MarkDuplicates "
         "{params} "
