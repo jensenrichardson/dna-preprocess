@@ -9,7 +9,7 @@ rule MarkDuplicates:
     input:
         lambda wildcards: expand("03-Sorted/{sample}/{readgroup}.sorted.bam", sample=wildcards.sample, readgroup=list(samples.loc[wildcards.sample, "files"].keys()))
     output:
-        bam=temp("04-Markdup/{sample}.markdup.bam"),
+        bam="04-Markdup/{sample}.markdup.bam",
 	metrics="04-Markdup/{sample}.metrics"
     log:
         "04-Markdup/{sample}.log"
