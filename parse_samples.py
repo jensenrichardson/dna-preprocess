@@ -22,14 +22,15 @@ class Sample:
         name (string): Name of the sample
         readgroups (list): List of the readgroups associated with the sample. List of Readgroup objects
         command (string): Optional command associated with sample. Used with STAR mapper. 
-    """
+    """  # noqa: E501
+
     def __init__(self, name=""):
         self.name = name
         self.readgroups = []
         self.command = []
 
     def __repr__(self):
-        rep = f'Sample(name: {self.name}, readgroups: {self.readgroups}, command: {self.command})'
+        rep = f'Sample(name: {self.name}, readgroups: {self.readgroups}, command: {self.command})'  # noqa: E501
         return rep
 
     def addReadgroup(self, rg):
@@ -44,12 +45,13 @@ class Readgroup:
         rg (string): Name of readgroup
         r1 (file): Read 1 file of readgroup
         r2 (file): Read 2 file of readgroup
-        command (string): Readgroup string for readgroup (bwa). Includes illumina platform
+        command (string): Readgroup string for readgroup (bwa). Includes illumina platform.
 
     Returns:
         _type_: _description_
-    """
+    """  # noqa: E501
     # name of readgroup
+
     def __init__(self, rg=""):
         self.rg = rg
         self._r1 = ""
@@ -67,7 +69,7 @@ class Readgroup:
 
     # better printing
     def __repr__(self):
-        rep = f'Readgroup(rg: {self.rg}, r1: {self.r1}, r2: {self.r2}, command: {self.command})'
+        rep = f'Readgroup(rg: {self.rg}, r1: {self.r1}, r2: {self.r2}, command: {self.command})'  # noqa: E501
         return rep
 
     # getters and setters for r1 and r2 that ensure that the file exists
@@ -159,7 +161,7 @@ def get_samples(fastq_files: list):
 
     Returns:
         list: List of incomplete Sample objects
-    """
+    """  # noqa: E501
     # Establishes list of samples
     samples = []
     for file in fastq_files:
@@ -169,10 +171,10 @@ def get_samples(fastq_files: list):
         sample = Sample(sample_name)
         # Makes a regex looking for that sample name
         name_match = re.compile(f"^{sample.name}")
-        # Adds that sample to the list of samples if there isn't already one with that name initialized
+        # Adds that sample to the list of samples if there isn't already one with that name initialized  # noqa: E501
         samples if any(name_match.match(s.name)
                        for s in samples) else samples.append(sample)
-    # sorts the list of samples alphabetically (had to use a lambda function because I used Sample Class)
+    # sorts the list of samples alphabetically (had to use a lambda function because I used Sample Class)  # noqa: E501
     samples.sort(key=lambda s: s.name)
     return samples
 
@@ -199,10 +201,11 @@ def get_readgroups(samples: list, fastq_files: list, fastq_dir: Path, verb: int)
         # each sample must have at least one R1 and R2 file to be valid
         match_r1 = re.compile(f"^{sample.name}.+?(?=R1)")
         match_r2 = re.compile(f"^{sample.name}.+?(?=R2)")
-        # Takes the first read, up to but not including the R1, as long as there is a fastq file
+        # Takes the first read, up to but not including the R1, as long as there is a fastq file  # noqa: E501
         # for both R1 and R2 for the sample
         readgroups = [match_r1.match(file).group(0) for file in fastq_files if
-                      match_r1.match(file) and any(match_r2.match(file) for file in fastq_files)]
+                      match_r1.match(file) and any(match_r2.match(file) 
+                                                   for file in fastq_files)]
         # Makes sure that there were some readgroups found for each sample
         if not readgroups and verb > 0:
             print(f"{sample.name} has no readgroups. {readgroups}")
@@ -220,7 +223,9 @@ def get_readgroups(samples: list, fastq_files: list, fastq_dir: Path, verb: int)
                 if not r1 or not r2:
                     print(r1, r2)
                     raise Exception(
-                        f'Either R1: {r1} or R2: {r2} was not found. Make sure your samples are formatted correctly. \n A good example is one names "SAMPLE_READGROUP_R1.fastq".')
+                        f'Either R1: {r1} or R2: {r2} was not found. Make sure your' \
+                        f' samples are formatted correctly. \n A good example is' \
+                        f' one names "SAMPLE_READGROUP_R1.fastq".')
                 # Creates readgroup object
                 final_rg = Readgroup()
                 final_rg.rg = rg
@@ -243,8 +248,10 @@ def getStarCommand(sample: Sample):
         string: Command string to read files into STAR mapper
     """
     if len(sample.readgroups) == 1:
-        return f'--readFilesIn {sample.readgroups[0].r1} {sample.readgroups[0].r2} --outSAMattributes All ' \
-               f'--outSAMattrRGline ID:{sample.readgroups[0].rg} PL:ILLUMINA SM:{sample.name} '
+        return f'--readFilesIn {sample.readgroups[0].r1} {sample.readgroups[0].r2}' \
+                f' --outSAMattributes All ' \
+                f'--outSAMattrRGline ID:{sample.readgroups[0].rg} ' \
+                f'PL:ILLUMINA SM:{sample.name} '
     elif len(sample.readgroups) > 1:
         r1s = []
         r2s = []
@@ -253,7 +260,7 @@ def getStarCommand(sample: Sample):
             r1s.append(readg.r1)
             r2s.append(readg.r2)
             rgs.append(readg.rg)
-        samattr = f'--outSAMattributes All --outSAMattrRGline ID:{rgs[0]} PL:ILLUMINA SM:{sample.name} '
+        samattr = f'--outSAMattributes All --outSAMattrRGline ID:{rgs[0]} PL:ILLUMINA SM:{sample.name} '  # noqa: E501
         for rg in rgs[1:]:
             samattr = samattr + f', ID:{rg} PL:ILLUMINA SM:{sample.name} '
         return f'--readFilesIn {",".join(r1s)} {",".join(r2s)} {samattr}'
@@ -270,7 +277,7 @@ def getBwaCommand(sample: Sample):
     """
     for rg in sample.readgroups:
         # need two back slashed on the tabs for snakemake
-        command = f' -R \'@RG\\tID:{rg.rg}\\tPL:ILLUMINA\\tSM:{sample.name}\' '
+        command = f' -R \'@RG\tID:{rg.rg}\tPL:ILLUMINA\tSM:{sample.name}\' '
         rg.command = command
     return sample
 
@@ -286,7 +293,7 @@ def constructDict(samples: list, star: bool, bwa: bool, nextflow: bool):
 
     Returns:
         dict: Dictionary of the described format
-    """
+    """  # noqa: E501
     sample_dict = {}
     if nextflow:
         sample_dict["nextflow_table"] = []
@@ -330,7 +337,7 @@ def print_tsv(sample_d: dict, tsv_file: str, star: bool, bwa: bool, nextflow: bo
                                       'sample_name', 'files'])
     elif nextflow:
         data = pd.DataFrame(sample_d["nextflow_table"], columns=[
-                            'sample_name', 'readgroup', 'r1', 'r2', 'bwa_read_group_string'])
+                    'sample_name', 'readgroup', 'r1', 'r2', 'bwa_read_group_string'])
     else:
         data = pd.DataFrame.from_dict(sample_d, orient='index', columns=[
                                       'sample_name', 'files'])
@@ -352,8 +359,8 @@ if __name__ == "__main__":
     parser.add_argument("-b", "--bwa", action="store_true",
                         help="Form commands for mapping with bwa (mem 2).")
     parser.add_argument("-n", "--nextflow", action="store_true",
-                        help="Format for nextflow. Creates table with sample_name, readgroup, r1, r2, bwa_read_group_string as a tsv.")
-    parser.add_argument("-i", "--input-samples", type=str, help="Provide a tsv of sample names to look for in the "
+                        help="Format for nextflow. Creates table with sample_name, readgroup, r1, r2, bwa_read_group_string as a tsv.")  # noqa: E501
+    parser.add_argument("-i", "--input-samples", type=str, help="Provide a tsv of sample names to look for in the "  # noqa: E501
                                                                 "fastq directory.")
     args = parser.parse_args()
     main(args)
