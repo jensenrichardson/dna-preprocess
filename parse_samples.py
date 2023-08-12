@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # This script is responsible for parsing a directory of
-# fastq samples to produce a yaml that is easy to manage
-# with snakemake.
+# fastq samples to produce a tsv that is easy to manage
+# with snakemake or nextflow.
 from os import listdir
 from os.path import isfile, join
 import os
@@ -11,12 +11,18 @@ import re
 # for arguments
 import argparse
 import pandas as pd
-
 import glob
 
 
 # Defines class Sample with name string and readgroups list
 class Sample:
+    """Sample class is for representing a single genetic samples with all readgroups.
+
+    Attributes:
+        name (string): Name of the sample
+        readgroups (list): List of the readgroups associated with the sample. List of Readgroup objects
+        command (string): Optional command associated with sample. Used with STAR mapper. 
+    """
     def __init__(self, name=""):
         self.name = name
         self.readgroups = []
@@ -32,6 +38,17 @@ class Sample:
 
 
 class Readgroup:
+    """Defines Readgroup Object to represent readgroup
+
+    Attributes:
+        rg (string): Name of readgroup
+        r1 (file): Read 1 file of readgroup
+        r2 (file): Read 2 file of readgroup
+        command (string): Readgroup string for readgroup (bwa). Includes illumina platform
+
+    Returns:
+        _type_: _description_
+    """
     # name of readgroup
     def __init__(self, rg=""):
         self.rg = rg
@@ -76,7 +93,7 @@ class Readgroup:
 
 
 # Used for ensuring directory provided as argument is a valid directory
-def dir_path(string):
+def dir_path(string: str):
     if os.path.isdir(string):
         return string
     else:
@@ -131,7 +148,18 @@ def main(args):
     print(f'Formed {tsv_file} of {len(samples)} samples.')
 
 
-def get_samples(fastq_files):
+def get_samples(fastq_files: list):
+    """Gets incomplete samples from list of fastq files.
+
+    Just extracts the sample name. Does not format the readgroups or ensure that files exists.
+    Sample names are assumed to have the form "SAMPLE_..." (i.e. are followed by an underscore).
+
+    Args:
+        fastq_files (list): List of fastq files
+
+    Returns:
+        list: List of incomplete Sample objects
+    """
     # Establishes list of samples
     samples = []
     for file in fastq_files:
@@ -150,7 +178,21 @@ def get_samples(fastq_files):
 
 
 # Establishes readgroups
-def get_readgroups(samples, fastq_files, fastq_dir, verb):
+def get_readgroups(samples: list, fastq_files: list, fastq_dir: Path, verb: int):
+    """Produces a list of samples with readgroups
+
+    Args:
+        samples (list): List of incomplete sample objects missing readgroup information
+        fastq_files (list): List of files to form readgroups from
+        fastq_dir (directory): Directory of fastq files
+        verb (int): Amount of debug verbosity
+
+    Raises:
+        Exception: Unable to find r1 or r2 file associated with 
+
+    Returns:
+        list: List of complete sample objects with defined name and readgroups.
+    """
     # Iterates through samples
     final_samples = []
     for sample in samples:
@@ -178,7 +220,7 @@ def get_readgroups(samples, fastq_files, fastq_dir, verb):
                 if not r1 or not r2:
                     print(r1, r2)
                     raise Exception(
-                        f'Either R1: {r1} or R2: {r2} was not caught. File bug report')
+                        f'Either R1: {r1} or R2: {r2} was not found. Make sure your samples are formatted correctly. \n A good example is one names "SAMPLE_READGROUP_R1.fastq".')
                 # Creates readgroup object
                 final_rg = Readgroup()
                 final_rg.rg = rg
@@ -191,7 +233,15 @@ def get_readgroups(samples, fastq_files, fastq_dir, verb):
     return final_samples
 
 
-def getStarCommand(sample):
+def getStarCommand(sample: Sample):
+    """Returns a string with a partial STAR command for that sample
+
+    Args:
+        sample (Sample): Sample you're lookign for
+
+    Returns:
+        string: Command string to read files into STAR mapper
+    """
     if len(sample.readgroups) == 1:
         return f'--readFilesIn {sample.readgroups[0].r1} {sample.readgroups[0].r2} --outSAMattributes All ' \
                f'--outSAMattrRGline ID:{sample.readgroups[0].rg} PL:ILLUMINA SM:{sample.name} '
@@ -206,10 +256,18 @@ def getStarCommand(sample):
         samattr = f'--outSAMattributes All --outSAMattrRGline ID:{rgs[0]} PL:ILLUMINA SM:{sample.name} '
         for rg in rgs[1:]:
             samattr = samattr + f', ID:{rg} PL:ILLUMINA SM:{sample.name} '
-        return [f'--readFilesIn {",".join(r1s)} {",".join(r2s)} {samattr}']
+        return f'--readFilesIn {",".join(r1s)} {",".join(r2s)} {samattr}'
 
 
-def getBwaCommand(sample):
+def getBwaCommand(sample: Sample):
+    """Formats a readgroup attribute flag for bwa
+
+    Args:
+        sample (Sample): A sample object
+
+    Returns:
+        Sample: modified sample object with readgroups with commands
+    """
     for rg in sample.readgroups:
         # need two back slashed on the tabs for snakemake
         command = f' -R \'@RG\\tID:{rg.rg}\\tPL:ILLUMINA\\tSM:{sample.name}\' '
@@ -217,14 +275,25 @@ def getBwaCommand(sample):
     return sample
 
 
-def constructDict(samples, star, bwa, nextflow):
+def constructDict(samples: list, star: bool, bwa: bool, nextflow: bool):
+    """Constructs a dictionary for each output type
+
+    Args:
+        samples (List[Sample]): List of fully formatted samples
+        star (bool): Format for star output. Outputs sample [files] command tsv.
+        bwa (bool): Format for bwa output. Outputs sample Readgroup(r1, r2, command) tsv.
+        nextflow (bool): Format for nextflow output. Outputs Sample Readgroup r1 r2 bwa_flag_command tsv.
+
+    Returns:
+        dict: Dictionary of the described format
+    """
     sample_dict = {}
     if nextflow:
         sample_dict["nextflow_table"] = []
     for s in samples:
         files = [rg.r1 for rg in s.readgroups] + [rg.r2 for rg in s.readgroups]
         if star:
-            sample_dict[s.name] = [s.name, files, s.command[0]]
+            sample_dict[s.name] = [s.name, files, s.command]
         elif bwa:
             groups = {}
             for readgroup in s.readgroups:
@@ -243,7 +312,16 @@ def constructDict(samples, star, bwa, nextflow):
     return sample_dict
 
 
-def print_tsv(sample_d, tsv_file, star, bwa, nextflow):
+def print_tsv(sample_d: dict, tsv_file: str, star: bool, bwa: bool, nextflow: bool):
+    """Outputs the tsv of the sample dict
+
+    Args:
+        sample_d (dict): Dictionary output by @constructDict
+        tsv_file (str): Path to desired tsv file
+        star (bool): Format for STAR output.
+        bwa (bool): Format for bwa output.
+        nextflow (bool): Format for nextflow output.
+    """
     if star:
         data = pd.DataFrame.from_dict(sample_d, orient='index', columns=[
                                       'sample_name', 'files', 'command'])
@@ -261,7 +339,7 @@ def print_tsv(sample_d, tsv_file, star, bwa, nextflow):
 
 if __name__ == "__main__":
     # Parses arugments
-    # Only argument is for the directory
+    # Only required argument is for the sample directory
     parser = argparse.ArgumentParser(
         description="Create sample tsv for RNAseq mapping with STAR")
     parser.add_argument("fastq_dir", type=dir_path,
