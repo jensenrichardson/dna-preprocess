@@ -279,7 +279,7 @@ def getBwaCommand(sample: Sample):
     """
     for rg in sample.readgroups:
         # need two back slashed on the tabs for snakemake
-        command = f' -R \'@RG\tID:{rg.rg}\tPL:ILLUMINA\tSM:{sample.name}\' '
+        command = f' -R \'@RG\\tID:{rg.rg}\\tPL:ILLUMINA\\tSM:{sample.name}\' '
         rg.command = command
     return sample
 
@@ -347,8 +347,8 @@ def print_tsv(sample_d: dict, tsv_file: str, star: bool, bwa: bool, nextflow: bo
                     'sample_name', 'readgroup', 'r1', 'r2', 'bwa_read_group_string'])
         # Finds and replaces \t with \\t within the 
         # string in the bwa_read_group_string column 
-        data["bwa_read_group_string"] = data["bwa_read_group_string"].str.replace(
-            "\t", "\\t")
+        #data["bwa_read_group_string"] = data["bwa_read_group_string"].str.replace(
+        #    "\t", "\\t")
     else:
         data = pd.DataFrame.from_dict(sample_d, orient='index', columns=[
                                       'sample_name', 'files'])
