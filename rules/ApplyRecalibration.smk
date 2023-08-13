@@ -10,6 +10,8 @@ rule ApplyCalibration:
         bai="06-ApplyRecalibration/{sample}.recalibrated.bai"
     log:
         "06-ApplyRecalibration/{sample}.log"
+    container: 
+        "broadinstitute/gatk"
     resources:
         cores=16,
 	runtime=lambda wildcards, attempt: 15 + 30 * attempt + 60 * (attempt - 1)

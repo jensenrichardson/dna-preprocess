@@ -5,6 +5,8 @@ rule SortSam:
         temp("03-Sorted/{sample}/{readgroup}.sorted.bam"),
     log:
         "03-Sorted/{sample}/{readgroup}.log"
+    container:
+        "broadinstitute/gatk"
     resources:
         cores=16,
 	runtime=lambda wildcards, attempt: 30 * attempt

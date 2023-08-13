@@ -15,6 +15,8 @@ rule MarkDuplicates:
         "04-Markdup/{sample}.log"
     params:
         lambda wildcards, input: '-I ' + ' -I '.join(input)
+    container:
+        "broadinstitute/gatk"
     resources:
         cores=16,
 	runtime=lambda wildcards, attempt: 30 + 60 * attempt

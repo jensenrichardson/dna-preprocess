@@ -10,6 +10,8 @@ rule BaseRecalibration:
         known_sites="--known-sites " + " --known-sites ".join(config["known_sites"])
     log:
         "05-BaseRecalibrator/{sample}.log"
+    container:
+        "broadinstitute/gatk"
     resources:
         cores=16,
 	runtime=1440
