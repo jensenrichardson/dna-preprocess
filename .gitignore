@@ -14,3 +14,4 @@ samples-nextflow.tsv
 samples-star.tsv
 .vscode/launch.json
 .DS_Store
+samples-default.tsv
